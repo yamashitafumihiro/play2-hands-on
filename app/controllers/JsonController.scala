@@ -45,7 +45,14 @@ class JsonController @Inject()(components: ControllerComponents)
       BadRequest(Json.obj("result" -> "failure", "error" -> JsError.toJson(e)))
     }
   }
-  def remove(id: Long) = TODO
+  def remove(id: Long) = Action { implicit request =>
+    DB.localTx{ implicit session =>
+      Users.find(id).foreach { user =>
+        Users.destroy(user)
+      }
+      Ok(Json.obj("result" -> "success"))
+    }
+  }
 }
 
 object JsonController {
