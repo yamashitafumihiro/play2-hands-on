@@ -39,8 +39,34 @@ class UserController @Inject()(components: MessagesControllerComponents) extends
       Ok(views.html.user.edit(form, companies))
     }
   }
-  def create = TODO
-  def update = TODO
+  def create = Action { implicit request =>
+    DB.localTx { implicit session =>
+      userForm.bindFromRequest.fold(
+        error => {
+          BadRequest(views.html.user.edit(error, Companies.findAll()))
+        },
+        form => {
+          Users.create(form.name, form.companyId)
+          Redirect(routes.UserController.list)
+        }
+      )
+    }
+  }
+  def update = Action { implicit request =>
+    DB.localTx { implicit session =>
+      userForm.bindFromRequest.fold(
+        error => {
+          BadRequest(views.html.user.edit(error,Companies.findAll()))
+        },
+        form => {
+          Users.find(form.id.get).foreach { user =>
+            Users.save(user.copy(name = form.name, companyId = form.companyId))
+          }
+          Redirect(routes.UserController.list)
+        }
+      )
+    }
+  }
   def remove(id: Long) = TODO
 }
 
