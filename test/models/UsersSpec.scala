@@ -1,12 +1,12 @@
 package models
 
-import org.scalatest.flatspec.FixtureAnyFlatSpec
+import org.scalatest.fixture
 import org.scalatest.matchers.should.Matchers
 import scalikejdbc.scalatest.AutoRollback
 import scalikejdbc._
 
 
-class UsersSpec extends FixtureAnyFlatSpec with Matchers with AutoRollback {
+class UsersSpec extends fixture.FlatSpec with Matchers with AutoRollback {
   config.DBs.setup()
   val u = Users.syntax("u")
 
