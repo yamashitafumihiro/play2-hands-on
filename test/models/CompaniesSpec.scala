@@ -1,12 +1,20 @@
 package models
 
+import org.scalatest.fixture
 import org.scalatest.flatspec.FixtureAnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import scalikejdbc.scalatest.AutoRollback
 import scalikejdbc._
+import scalikejdbc.scalatest.AutoRollback
 
 
-class CompaniesSpec extends FixtureAnyFlatSpec with Matchers with AutoRollback {
+class CompaniesSpec extends fixture.FlatSpec with Matchers with AutoRollback {
+  config.DBs.setup()
+
+  override def fixture(implicit session: DBSession): Unit = {
+    SQL("insert into COMPANIES values (?, ?)").bind(123, "test_company1").update.apply()
+    SQL("insert into COMPANIES values (?, ?)").bind(234, "test_company2").update.apply()
+  }
+
   val c = Companies.syntax("c")
 
   behavior of "Companies"
@@ -36,25 +44,25 @@ class CompaniesSpec extends FixtureAnyFlatSpec with Matchers with AutoRollback {
     count should be >(0L)
   }
   it should "create new record" in { implicit session =>
-    val created = Companies.create(id = 123, name = "MyString")
+    val created = Companies.create(id = 999, name = "MyString")
     created should not be(null)
   }
   it should "save a record" in { implicit session =>
     val entity = Companies.findAll().head
-    // TODO modify something
-    val modified = entity
+    // nameを変更
+    val modified = entity.copy(name = "modify")
     val updated = Companies.save(modified)
     updated should not equal(entity)
   }
   it should "destroy a record" in { implicit session =>
-    val entity = Companies.findAll().head
+    val entity = Companies.find(123).get
     val deleted = Companies.destroy(entity)
     deleted should be(1)
     val shouldBeNone = Companies.find(123)
     shouldBeNone.isDefined should be(false)
   }
   it should "perform batch insert" in { implicit session =>
-    val entities = Companies.findAll()
+    val entities = Companies.findAllBy(sqls.in(c.id, Seq(123,234)))
     entities.foreach(e => Companies.destroy(e))
     val batchInserted = Companies.batchInsert(entities)
     batchInserted.size should be >(0)
