@@ -5,7 +5,7 @@ import models.{Companies, Users}
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, mapping, nonEmptyText, number, optional}
 import play.api.mvc.{MessagesAbstractController, MessagesControllerComponents}
-import scalikejdbc.{DB, select, withSQL}
+import scalikejdbc.{DB, NoSession, select, withSQL}
 
 import javax.inject.Inject
 
@@ -13,11 +13,12 @@ class UserController @Inject()(components: MessagesControllerComponents) extends
   private val u = Users.syntax("u")
   private val c = Companies.syntax("c")
   def list = Action { implicit request =>
-
     DB.readOnly { implicit session =>
       val users = withSQL {
-        select.from(Users as u).orderBy(u.id.asc)
-      }.map(Users(u.resultName)).list.apply()
+        select.from(Users as u).leftJoin(Companies as c).on(u.companyId, c.id).orderBy(u.id.asc)
+      }.map { rs =>
+        (Users(u)(rs), rs.intOpt(c.resultName.id).map(_ => Companies(c)(rs)))
+      }.list.apply()
 
       Ok(views.html.user.list(users))
     }
@@ -67,7 +68,14 @@ class UserController @Inject()(components: MessagesControllerComponents) extends
       )
     }
   }
-  def remove(id: Long) = TODO
+  def remove(id: Long) = Action { implicit request =>
+    DB.localTx { implicit session =>
+      Users.find(id).foreach{ user =>
+        Users.destroy(user)
+      }
+      Redirect(routes.UserController.list)
+    }
+  }
 }
 
 object UserController {
